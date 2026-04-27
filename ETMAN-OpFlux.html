@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ETMAN — Flujo de Mercadería</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d0f14;
+      --bg-buf:    #120f1a;
+      --bg-flujo:  #0f141a;
+      --border:    #1e2433;
+      --text:      #e2e8f0;
+      --muted:     #64748b;
+      --dim:       #3a4460;
+      --mono:      'Space Mono', monospace;
+      --sans:      'DM Sans', sans-serif;
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      padding: 1.5rem;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.8rem;
+      padding-bottom: 1rem;
+      border-bottom: 0.5px solid var(--border);
+    }
+    .header-left { display: flex; align-items: baseline; gap: 1rem; }
+    .brand {
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 700;
+      color: #4fc3f7;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+    }
+    .subtitle { font-size: 13px; color: var(--muted); }
+    .date { font-family: var(--mono); font-size: 11px; color: #475569; }
+
+    .mode-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #1a1f2e;
+      border: 0.5px solid #2a2f3d;
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-family: var(--sans);
+      font-size: 12px;
+      color: #94a3b8;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all .2s;
+    }
+    .mode-btn:hover { border-color: #4fc3f7; color: #4fc3f7; }
+    .mode-dot { width: 6px; height: 6px; border-radius: 50%; background: #4fc3f7; }
+
+    /* ── SCROLL ── */
+    .scroll-wrap { overflow-x: auto; padding-bottom: 1.5rem; }
+    .board { display: inline-grid; align-items: start; }
+
+    /* ── HEADERS ── */
+    .suc-header { text-align: center; padding: 0 8px 22px; }
+    .suc-name { font-size: 13px; font-weight: 600; }
+    .suc-tag { font-family: var(--mono); font-size: 9px; color: var(--dim); margin-top: 3px; }
+
+    .row-label { display: flex; flex-direction: column; justify-content: center; padding: 0 18px 0 0; }
+    .rl-type { font-size: 9px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 3px; }
+    .rl-type.buffer { color: #a78bfa; }
+    .rl-type.flujo  { color: #4fc3f7; }
+    .rl-name { font-size: 11px; font-weight: 600; color: #cbd5e1; }
+
+    /* ── BUFFER CELLS ── */
+    .buf-cell { border-radius: 10px; padding: 16px 18px; }
+
+    .metric-pair   { display: flex; gap: 18px; margin-bottom: 10px; }
+    .metric-pair-3 { display: flex; gap: 12px; margin-bottom: 10px; }
+    .metric { flex: 1; }
+    .metric-val { font-family: var(--mono); font-size: 15px; font-weight: 700; color: var(--text); line-height: 1; }
+    .metric-lbl { font-size: 9px; color: var(--dim); margin-top: 4px; text-transform: uppercase; letter-spacing: .07em; }
+    .mdivider { width: 0.5px; background: var(--border); }
+
+    .extra-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 10px;
+      border-top: 0.5px solid var(--border);
+    }
+    .conv-row { display: flex; gap: 14px; }
+    .conv-val { font-family: var(--mono); font-size: 12px; font-weight: 700; color: #94a3b8; }
+    .conv-lbl { font-size: 8px; color: var(--dim); text-transform: uppercase; letter-spacing: .05em; margin-top: 2px; }
+
+    .aging { display: flex; align-items: center; gap: 6px; padding-top: 10px; border-top: 0.5px solid var(--border); }
+    .aging-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+    .aging-val { font-family: var(--mono); font-size: 10px; font-weight: 700; }
+    .aging-lbl { font-size: 9px; color: var(--dim); }
+
+    .cap-bar-wrap { margin-top: 10px; padding-top: 10px; border-top: 0.5px solid var(--border); }
+    .cap-bar-lbl  { display: flex; justify-content: space-between; margin-bottom: 5px; }
+    .cap-bar-txt  { font-size: 9px; color: var(--dim); text-transform: uppercase; letter-spacing: .06em; }
+    .cap-bar-pct  { font-family: var(--mono); font-size: 10px; font-weight: 700; }
+    .cap-bar-bg   { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+    .cap-bar-fill { height: 100%; border-radius: 2px; }
+
+    .demora-badge { font-family: var(--mono); font-size: 9px; font-weight: 700; padding: 3px 8px; border-radius: 4px; }
+    .d-ok   { background: #0a1f12; color: #22c55e; border: 0.5px solid #14532d; }
+    .d-warn { background: #1c1400; color: #f59e0b; border: 0.5px solid #78350f; }
+    .d-crit { background: #1c0404; color: #ef4444; border: 0.5px solid #7f1d1d; }
+
+    /* ── FLUJO LINES ── */
+    .flujo-data { display: flex; flex-direction: column; gap: 2px; }
+    .fd-val { font-family: var(--mono); font-size: 12px; font-weight: 700; line-height: 1; }
+    .fd-lbl { font-size: 8px; color: var(--dim); text-transform: uppercase; letter-spacing: .06em; }
+
+    /* ── FLOW ANIMATIONS ── */
+    @keyframes flowAnim { 0% { background-position: 0 0; } 100% { background-position: 0 40px; } }
+    .fl-ok   { background: repeating-linear-gradient(to bottom, #22c55e 0, #22c55e 18px, #0d3320 18px, #0d3320 28px); background-size: 4px 40px; animation: flowAnim .45s linear infinite; }
+    .fl-warn { background: repeating-linear-gradient(to bottom, #f59e0b 0, #f59e0b 16px, #2a1a00 16px, #2a1a00 28px); background-size: 4px 40px; animation: flowAnim 1.3s linear infinite; }
+    .fl-crit { background: repeating-linear-gradient(to bottom, #ef4444 0, #ef4444 14px, #2a0000 14px, #2a0000 28px); background-size: 4px 40px; animation: flowAnim 3s linear infinite; }
+
+    /* ── LEGEND ── */
+    .legend {
+      display: flex;
+      gap: 24px;
+      margin-top: 1.4rem;
+      padding-top: 1rem;
+      border-top: 0.5px solid var(--border);
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .legend-title { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: .08em; }
+    .legend-group { display: flex; align-items: center; gap: 12px; }
+    .legend-item  { display: flex; align-items: center; gap: 5px; font-size: 10px; color: #475569; }
+    .legend-dot   { width: 7px; height: 7px; border-radius: 50%; }
+    .legend-sep   { width: 0.5px; height: 20px; background: var(--border); }
+
+    /* ── TIMESTAMP ── */
+    .last-update {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: #2a3550;
+      margin-top: .5rem;
+      text-align: right;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="header-left">
+      <span class="brand">ETMAN</span>
+      <span class="subtitle">Flujo de Mercadería — Red Completa</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;">
+      <span class="date" id="hdr-date"></span>
+      <a class="mode-btn" href="mapa.html">
+        <div class="mode-dot"></div>Ver flujos intersucursales
+      </a>
+    </div>
+  </div>
+
+  <div class="scroll-wrap">
+    <div id="board" class="board"></div>
+  </div>
+
+  <div class="legend">
+    <span class="legend-title">Buffer →</span>
+    <div class="legend-group">
+      <div class="legend-item"><div class="legend-dot" style="background:#a78bfa;opacity:.35;"></div>Holgado</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f59e0b;"></div>Atención</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ef4444;"></div>Saturado</div>
+    </div>
+    <div class="legend-sep"></div>
+    <span class="legend-title">Flujo →</span>
+    <div class="legend-group">
+      <div class="legend-item"><div class="legend-dot" style="background:#22c55e;"></div>Alto</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f59e0b;"></div>Medio</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ef4444;"></div>Bajo</div>
+    </div>
+  </div>
+
+  <p class="last-update" id="last-update"></p>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   DATA — reemplazar cada bloque con fetch() a Google Sheet
+   cuando la fuente esté disponible.
+   ═══════════════════════════════════════════════════════════════ */
+
+const SUC = [
+  { name: 'Moreno',       tag: 'HUB' },
+  { name: 'Bahía Blanca', tag: 'BBL' },
+  { name: 'Rosario',      tag: 'ROS' },
+  { name: 'Córdoba',      tag: 'CBA' },
+  { name: 'Mendoza',      tag: 'MDZ' },
+  { name: 'Paraná',       tag: 'PRA' },
+  { name: 'Rafaela',      tag: 'RAF' },
+];
+
+const SUC_COLORS = ['#4fc3f7','#a78bfa','#34d399','#fb923c','#f472b6','#facc15','#60a5fa'];
+
+/*
+  Estructura de datos por sucursal:
+  tBuf  — Tránsito inbound (buffer)
+  rec   — Recepción (flujo)
+  rBuf  — RECEP (buffer)
+  guard — Guardado (flujo)
+  pBuf  — Pedidos pendientes (buffer)
+  pick  — Picking (flujo)
+  audit — Auditoría (flujo)
+  desp  — Despacho (flujo)
+
+  sat   → % saturación del buffer  (0–100)
+  cap   → % capacidad utilizada del flujo (0–100)
+*/
+const DATA = [
+  { tBuf:{L:4820,U:38400,cajas:192,pallets:8,demora:1,sat:38}, rec:{L:1240,U:9800,cap:82}, rBuf:{L:980,U:8100,sat:22}, guard:{L:910,U:7800,cap:76}, pBuf:{ped:148,L:3400,U:22000,dias:0,sat:31}, pick:{ped:130,L:3200,U:20100,cap:88}, audit:{ped:128,L:3100,U:20800,cap:91}, desp:{ped:126,L:3050,U:20200,bultos:404,pallets:10,cap:89} },
+  { tBuf:{L:1100,U:8200,cajas:41,pallets:2,demora:3,sat:61}, rec:{L:480,U:3900,cap:54}, rBuf:{L:620,U:5100,sat:74}, guard:{L:310,U:2800,cap:38}, pBuf:{ped:94,L:1800,U:11200,dias:2,sat:55}, pick:{ped:71,L:1600,U:10400,cap:62}, audit:{ped:69,L:1550,U:10100,cap:59}, desp:{ped:68,L:1520,U:9900,bultos:198,pallets:5,cap:61} },
+  { tBuf:{L:920,U:7100,cajas:36,pallets:2,demora:0,sat:29}, rec:{L:390,U:3200,cap:71}, rBuf:{L:280,U:2400,sat:18}, guard:{L:270,U:2300,cap:68}, pBuf:{ped:82,L:2100,U:13400,dias:3,sat:48}, pick:{ped:66,L:1900,U:12100,cap:55}, audit:{ped:65,L:1880,U:11900,cap:57}, desp:{ped:64,L:1850,U:11700,bultos:234,pallets:6,cap:56} },
+  { tBuf:{L:1380,U:10200,cajas:51,pallets:3,demora:6,sat:88}, rec:{L:520,U:4100,cap:31}, rBuf:{L:1800,U:14000,sat:91}, guard:{L:200,U:1800,cap:22}, pBuf:{ped:110,L:2200,U:14100,dias:1,sat:42}, pick:{ped:98,L:2100,U:13500,cap:79}, audit:{ped:97,L:2060,U:13700,cap:81}, desp:{ped:96,L:2040,U:13400,bultos:268,pallets:7,cap:80} },
+  { tBuf:{L:640,U:5100,cajas:26,pallets:1,demora:0,sat:19}, rec:{L:280,U:2300,cap:66}, rBuf:{L:190,U:1600,sat:14}, guard:{L:230,U:2000,cap:71}, pBuf:{ped:61,L:1200,U:7800,dias:5,sat:67}, pick:{ped:42,L:980,U:6400,cap:43}, audit:{ped:41,L:960,U:6200,cap:41}, desp:{ped:40,L:940,U:6100,bultos:122,pallets:3,cap:42} },
+  { tBuf:{L:410,U:3300,cajas:17,pallets:1,demora:2,sat:44}, rec:{L:190,U:1600,cap:73}, rBuf:{L:240,U:2000,sat:33}, guard:{L:155,U:1350,cap:58}, pBuf:{ped:44,L:880,U:5600,dias:1,sat:29}, pick:{ped:38,L:820,U:5200,cap:69}, audit:{ped:37,L:800,U:5100,cap:71}, desp:{ped:37,L:790,U:5000,bultos:100,pallets:3,cap:70} },
+  { tBuf:{L:290,U:2400,cajas:12,pallets:1,demora:0,sat:12}, rec:{L:140,U:1200,cap:88}, rBuf:{L:110,U:900,sat:9}, guard:{L:115,U:960,cap:84}, pBuf:{ped:28,L:620,U:4000,dias:9,sat:82}, pick:{ped:14,L:480,U:3100,cap:28}, audit:{ped:13,L:460,U:2900,cap:25}, desp:{ped:13,L:450,U:2800,bultos:56,pallets:2,cap:26} },
+];
+
+/* ═══════════════════════════════════════════════════════════════
+   HELPERS
+   ═══════════════════════════════════════════════════════════════ */
+function fmt(n) { return n >= 1000 ? (n/1000).toFixed(1)+'k' : String(n); }
+function agingTxt(v) { return v === 0 ? 'Hoy' : v === 1 ? '1 día' : `${v} días`; }
+
+function bufStyle(sat) {
+  if (sat < 50) return { border:'#a78bfa44', glow:'#a78bfa22', bar:'#7c3aed', pct:'#a78bfa' };
+  if (sat < 75) return { border:'#f59e0b55', glow:'#f59e0b22', bar:'#f59e0b', pct:'#f59e0b' };
+  return { border:'#ef444466', glow:'#ef444422', bar:'#ef4444', pct:'#ef4444' };
+}
+function flujoClass(cap) { return cap >= 70 ? 'fl-ok' : cap >= 40 ? 'fl-warn' : 'fl-crit'; }
+function flujoColor(cap) { return cap >= 70 ? '#22c55e' : cap >= 40 ? '#f59e0b' : '#ef4444'; }
+
+function capBar(pct, col, label) {
+  return `<div class="cap-bar-wrap">
+    <div class="cap-bar-lbl">
+      <span class="cap-bar-txt">${label}</span>
+      <span class="cap-bar-pct" style="color:${col.pct}">${pct}%</span>
+    </div>
+    <div class="cap-bar-bg"><div class="cap-bar-fill" style="width:${pct}%;background:${col.bar};"></div></div>
+  </div>`;
+}
+
+function mp2(L, U) {
+  return `<div class="metric-pair">
+    <div class="metric"><div class="metric-val">${fmt(L)}</div><div class="metric-lbl">Líneas</div></div>
+    <div class="mdivider"></div>
+    <div class="metric"><div class="metric-val">${fmt(U)}</div><div class="metric-lbl">Unidades</div></div>
+  </div>`;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BUFFER BUILDERS
+   ═══════════════════════════════════════════════════════════════ */
+function buildTBuf(d) {
+  const c = bufStyle(d.sat);
+  const ds = d.demora === 0 ? 'd-ok' : d.demora <= 2 ? 'd-warn' : 'd-crit';
+  const dTxt = d.demora === 0 ? 'Al día' : `+${d.demora}d`;
+  return `<div class="buf-cell" style="background:var(--bg-buf);border:1.5px solid ${c.border};box-shadow:0 0 10px ${c.glow};">
+    ${mp2(d.L, d.U)}
+    <div class="extra-row">
+      <div class="conv-row">
+        <div><div class="conv-val">${d.cajas}</div><div class="conv-lbl">Cajas</div></div>
+        <div><div class="conv-val">${d.pallets}</div><div class="conv-lbl">Pallets</div></div>
+      </div>
+      <span class="demora-badge ${ds}">${dTxt}</span>
+    </div>
+    ${capBar(d.sat, c, 'Saturación')}
+  </div>`;
+}
+
+function buildRBuf(d) {
+  const c = bufStyle(d.sat);
+  return `<div class="buf-cell" style="background:var(--bg-buf);border:1.5px solid ${c.border};box-shadow:0 0 10px ${c.glow};">
+    ${mp2(d.L, d.U)}
+    ${capBar(d.sat, c, 'Saturación')}
+  </div>`;
+}
+
+function buildPBuf(d) {
+  const c = bufStyle(d.sat);
+  const aC = d.dias <= 1 ? '#22c55e' : d.dias <= 4 ? '#f59e0b' : '#ef4444';
+  return `<div class="buf-cell" style="background:var(--bg-buf);border:1.5px solid ${c.border};box-shadow:0 0 10px ${c.glow};">
+    <div class="metric-pair-3">
+      <div class="metric"><div class="metric-val">${d.ped}</div><div class="metric-lbl">Pedidos</div></div>
+      <div class="mdivider"></div>
+      <div class="metric"><div class="metric-val">${fmt(d.L)}</div><div class="metric-lbl">Líneas</div></div>
+      <div class="mdivider"></div>
+      <div class="metric"><div class="metric-val">${fmt(d.U)}</div><div class="metric-lbl">Unidades</div></div>
+    </div>
+    <div class="aging">
+      <div class="aging-dot" style="background:${aC};"></div>
+      <span class="aging-val" style="color:${aC};">${agingTxt(d.dias)}</span>
+      <span class="aging-lbl">&nbsp;pedido más antiguo</span>
+    </div>
+    ${capBar(d.sat, c, 'Saturación')}
+  </div>`;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   FLUJO BUILDERS
+   ═══════════════════════════════════════════════════════════════ */
+function flujoRow(leftVal, leftLbl, rightVal, rightLbl, cap, extraLeft, extraRight) {
+  const fc  = flujoClass(cap);
+  const col = flujoColor(cap);
+  return `
+  <div style="display:flex;align-items:center;padding:10px 0;">
+    <div class="flujo-data" style="flex:1;align-items:flex-end;padding:0 12px;">
+      <span class="fd-val" style="color:${col};">${leftVal}</span>
+      <span class="fd-lbl">${leftLbl}</span>
+      ${extraLeft || ''}
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;width:16px;height:70px;flex-shrink:0;">
+      <div class="${fc}" style="width:4px;flex:1;border-radius:3px;overflow:hidden;"></div>
+    </div>
+    <div class="flujo-data" style="flex:1;align-items:flex-start;padding:0 12px;">
+      <span class="fd-val" style="color:${col};">${rightVal}</span>
+      <span class="fd-lbl">${rightLbl}</span>
+      ${extraRight || ''}
+    </div>
+  </div>
+  <div style="padding:0 10px 8px;">
+    <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+      <span style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;">Capacidad</span>
+      <span style="font-family:var(--mono);font-size:9px;font-weight:700;color:${col};">${cap}%</span>
+    </div>
+    <div style="height:3px;background:var(--border);border-radius:2px;overflow:hidden;">
+      <div style="width:${cap}%;height:100%;background:${col};border-radius:2px;"></div>
+    </div>
+  </div>`;
+}
+
+const xtra = (v) => `<span style="font-family:var(--mono);font-size:10px;color:#475569;">${v}</span>`;
+
+function buildRec(d)   { return flujoRow(fmt(d.L),'Líneas',fmt(d.U),'Unidades',d.cap); }
+function buildGuard(d) { return flujoRow(fmt(d.L),'Líneas',fmt(d.U),'Unidades',d.cap); }
+function buildPick(d)  { return flujoRow(fmt(d.L),'Líneas',fmt(d.U),'Unidades',d.cap, xtra(`${d.ped} ped`)); }
+function buildAudit(d) { return flujoRow(fmt(d.L),'Líneas',fmt(d.U),'Unidades',d.cap, xtra(`${d.ped} ped`)); }
+function buildDesp(d)  { return flujoRow(fmt(d.L),'Líneas',fmt(d.U),'Unidades',d.cap, xtra(`${d.ped} ped`), xtra(`${d.bultos}B / ${d.pallets}P`)); }
+
+/* ═══════════════════════════════════════════════════════════════
+   ROW DEFINITIONS
+   ═══════════════════════════════════════════════════════════════ */
+const ROWS = [
+  { type:'buffer', name:'Tránsito inbound',    build: d => buildTBuf(d.tBuf)  },
+  { type:'flujo',  name:'Recepción',            build: d => buildRec(d.rec)    },
+  { type:'buffer', name:'RECEP',                build: d => buildRBuf(d.rBuf)  },
+  { type:'flujo',  name:'Guardado',             build: d => buildGuard(d.guard)},
+  { type:'buffer', name:'Pedidos pendientes',   build: d => buildPBuf(d.pBuf)  },
+  { type:'flujo',  name:'Picking',              build: d => buildPick(d.pick)  },
+  { type:'flujo',  name:'Auditoría',            build: d => buildAudit(d.audit)},
+  { type:'flujo',  name:'Despacho',             build: d => buildDesp(d.desp)  },
+];
+
+/* ═══════════════════════════════════════════════════════════════
+   RENDER
+   ═══════════════════════════════════════════════════════════════ */
+const LABEL_W = 160;
+const COL_W   = 210;
+const GAP     = 18;
+const N       = SUC.length;
+
+const board = document.getElementById('board');
+board.style.gridTemplateColumns = `${LABEL_W}px repeat(${N}, ${COL_W}px)`;
+board.style.gap = `0 ${GAP}px`;
+
+// Header row
+board.appendChild(document.createElement('div'));
+SUC.forEach((s, i) => {
+  const h = document.createElement('div');
+  h.className = 'suc-header';
+  h.innerHTML = `<div class="suc-name" style="color:${SUC_COLORS[i]}">${s.name}</div><div class="suc-tag">${s.tag}</div>`;
+  board.appendChild(h);
+});
+
+// Data rows
+ROWS.forEach(row => {
+  const lbl = document.createElement('div');
+  lbl.style.cssText = 'display:flex;align-items:center;padding:4px 0;';
+  lbl.innerHTML = `<div class="row-label">
+    <div class="rl-type ${row.type}">${row.type === 'buffer' ? '▣ Buffer' : '▷ Flujo'}</div>
+    <div class="rl-name">${row.name}</div>
+  </div>`;
+  board.appendChild(lbl);
+
+  DATA.forEach(d => {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'padding:4px 0;';
+    wrap.innerHTML = row.build(d);
+    board.appendChild(wrap);
+  });
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   DATE / TIMESTAMP
+   ═══════════════════════════════════════════════════════════════ */
+const now = new Date();
+const dias = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const hh = String(now.getHours()).padStart(2,'0');
+const mm = String(now.getMinutes()).padStart(2,'0');
+document.getElementById('hdr-date').textContent =
+  `${dias[now.getDay()]} ${now.getDate()} ${meses[now.getMonth()]} ${now.getFullYear()} — ${hh}:${mm}`;
+document.getElementById('last-update').textContent =
+  `Última actualización: ${hh}:${mm} — datos ficticios`;
+</script>
+</body>
+</html>
